@@ -6,190 +6,198 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Modal,
-  TextInput,
-  ScrollView,
+  Image,
 } from 'react-native';
-import client from '../../api/client';
+import { animalService } from '../../api/animalService';
 import { COLORS, SPACING, SHADOW } from '../../theme';
+import { API_URL } from '@env';
 
-const AnimalManagementScreen = () => {
+import { useFocusEffect } from '@react-navigation/native';
+
+const AnimalManagementScreen = ({ navigation }: any) => {
   const [animals, setAnimals] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingAnimal, setEditingAnimal] = useState<any>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    type: 'COW',
-    breed: '',
-    price: '',
-    age: '',
-    weight: '',
-    imageUrl: '',
-  });
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchAnimals = async () => {
     try {
-      const response = await client.get('/animal');
-      setAnimals(response.data);
+      setRefreshing(true);
+      const response = await animalService.getAll();
+      setAnimals(response.data.data);
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch animals');
+    } finally {
+      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    fetchAnimals();
-  }, []);
-
-  const handleSave = async () => {
-    try {
-      if (editingAnimal) {
-        await client.put(`/animal/${editingAnimal.id}`, formData);
-      } else {
-        await client.post('/animal', formData);
-      }
-      setModalVisible(false);
+  useFocusEffect(
+    React.useCallback(() => {
       fetchAnimals();
-      setEditingAnimal(null);
-      setFormData({ name: '', type: 'COW', breed: '', price: '', age: '', weight: '', imageUrl: '' });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save animal');
-    }
-  };
+    }, [])
+  );
 
   const handleDelete = (id: string) => {
-    Alert.alert('Delete', 'Are you sure?', [
+    Alert.alert('Delete', 'Are you sure you want to remove this animal?', [
       { text: 'Cancel' },
       {
         text: 'Delete',
         onPress: async () => {
-          await client.delete(`/animal/${id}`);
-          fetchAnimals();
+          try {
+            await animalService.delete(id);
+            fetchAnimals();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete animal');
+          }
         },
         style: 'destructive',
       },
     ]);
   };
 
-  const openEdit = (animal: any) => {
-    setEditingAnimal(animal);
-    setFormData({
-      name: animal.name,
-      type: animal.type,
-      breed: animal.breed,
-      price: animal.price.toString(),
-      age: animal.age.toString(),
-      weight: animal.weight.toString(),
-      imageUrl: animal.imageUrl || '',
-    });
-    setModalVisible(true);
-  };
+  const renderItem = ({ item }: any) => (
+    <View style={styles.item}>
+      <View style={styles.itemInfo}>
+        <Image 
+          source={{ 
+            uri: item.imageUrl 
+              ? (item.imageUrl.startsWith('http') ? item.imageUrl : `${API_URL.replace('/api/', '')}${item.imageUrl}`)
+              : 'https://via.placeholder.com/100' 
+          }} 
+          style={styles.thumbnail} 
+        />
+        <View style={styles.details}>
+          <Text style={styles.itemName}>{item.name}</Text>
+          <Text style={styles.itemDetail}>{item.type} • {item.breed}</Text>
+          <Text style={styles.itemPrice}>${item.price}</Text>
+        </View>
+      </View>
+      <View style={styles.actions}>
+        <TouchableOpacity 
+          style={styles.iconButton} 
+          onPress={() => navigation.navigate('AddAnimal', { animal: item })}
+        >
+          <Text style={styles.editAction}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.iconButton} 
+          onPress={() => handleDelete(item.id)}
+        >
+          <Text style={styles.deleteAction}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.addButton} onPress={() => {
-        setEditingAnimal(null);
-        setFormData({ name: '', type: 'COW', breed: '', price: '', age: '', weight: '', imageUrl: '' });
-        setModalVisible(true);
-      }}>
-        <Text style={styles.addButtonText}>+ Add New Animal</Text>
-      </TouchableOpacity>
+      <View style={styles.header}>
+        <Text style={styles.countText}>{animals.length} Animals found</Text>
+        <TouchableOpacity 
+          style={styles.addButton} 
+          onPress={() => navigation.navigate('AddAnimal')}
+        >
+          <Text style={styles.addButtonText}>+ Add New</Text>
+        </TouchableOpacity>
+      </View>
 
       <FlatList
         data={animals}
         keyExtractor={(item: any) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <View>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemDetail}>{item.type} • {item.breed}</Text>
-            </View>
-            <View style={styles.actions}>
-              <TouchableOpacity onPress={() => openEdit(item)}>
-                <Text style={styles.editAction}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                <Text style={styles.deleteAction}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        renderItem={renderItem}
+        onRefresh={fetchAnimals}
+        refreshing={refreshing}
+        contentContainerStyle={styles.listContent}
       />
-
-      <Modal visible={modalVisible} animationType="slide">
-        <ScrollView style={styles.modalContent}>
-          <Text style={styles.modalTitle}>{editingAnimal ? 'Edit Animal' : 'Add Animal'}</Text>
-          
-          <TextInput
-            placeholder="Name"
-            style={styles.input}
-            value={formData.name}
-            onChangeText={(t) => setFormData({...formData, name: t})}
-          />
-          <TextInput
-            placeholder="Breed"
-            style={styles.input}
-            value={formData.breed}
-            onChangeText={(t) => setFormData({...formData, breed: t})}
-          />
-          <TextInput
-            placeholder="Price"
-            style={styles.input}
-            keyboardType="numeric"
-            value={formData.price}
-            onChangeText={(t) => setFormData({...formData, price: t})}
-          />
-          <TextInput
-            placeholder="Age (Months)"
-            style={styles.input}
-            keyboardType="numeric"
-            value={formData.age}
-            onChangeText={(t) => setFormData({...formData, age: t})}
-          />
-          <TextInput
-            placeholder="Weight (KG)"
-            style={styles.input}
-            keyboardType="numeric"
-            value={formData.weight}
-            onChangeText={(t) => setFormData({...formData, weight: t})}
-          />
-          <TextInput
-            placeholder="Image URL"
-            style={styles.input}
-            value={formData.imageUrl}
-            onChangeText={(t) => setFormData({...formData, imageUrl: t})}
-          />
-
-          <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-              <Text style={styles.btnText}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-              <Text style={styles.btnText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, padding: SPACING.md },
-  addButton: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: 8, marginBottom: SPACING.md, alignItems: 'center' },
-  addButtonText: { color: '#fff', fontWeight: 'bold' },
-  item: { backgroundColor: COLORS.surface, padding: SPACING.md, borderRadius: 8, flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.sm, ...SHADOW },
-  itemName: { fontSize: 18, fontWeight: 'bold' },
-  itemDetail: { color: COLORS.textSecondary },
-  actions: { flexDirection: 'row', alignItems: 'center' },
-  editAction: { color: COLORS.primary, marginRight: SPACING.md },
-  deleteAction: { color: COLORS.error },
-  modalContent: { padding: SPACING.lg },
-  modalTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: SPACING.lg },
-  input: { backgroundColor: COLORS.background, padding: SPACING.md, borderRadius: 8, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
-  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: SPACING.lg },
-  saveBtn: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: 8, flex: 0.48, alignItems: 'center' },
-  cancelBtn: { backgroundColor: COLORS.textSecondary, padding: SPACING.md, borderRadius: 8, flex: 0.48, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: 'bold' },
+  container: { 
+    flex: 1, 
+    backgroundColor: COLORS.background 
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    ...SHADOW,
+  },
+  countText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  addButton: { 
+    backgroundColor: COLORS.primary, 
+    paddingHorizontal: SPACING.lg, 
+    paddingVertical: SPACING.sm, 
+    borderRadius: 8, 
+  },
+  addButtonText: { 
+    color: '#fff', 
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  listContent: {
+    padding: SPACING.md,
+  },
+  item: { 
+    backgroundColor: COLORS.surface, 
+    padding: SPACING.md, 
+    borderRadius: 12, 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: SPACING.md, 
+    ...SHADOW 
+  },
+  itemInfo: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  thumbnail: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: SPACING.md,
+  },
+  details: {
+    justifyContent: 'center',
+  },
+  itemName: { 
+    fontSize: 18, 
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  itemDetail: { 
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    marginTop: 2,
+  },
+  itemPrice: {
+    color: COLORS.primary,
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginTop: 4,
+  },
+  actions: { 
+    flexDirection: 'column', 
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  iconButton: {
+    paddingVertical: SPACING.xs,
+  },
+  editAction: { 
+    color: COLORS.primary, 
+    fontWeight: '600',
+  },
+  deleteAction: { 
+    color: COLORS.error,
+    fontWeight: '600',
+  },
 });
 
 export default AnimalManagementScreen;

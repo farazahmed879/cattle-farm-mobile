@@ -9,14 +9,14 @@ import {
   Alert,
 } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
-import client from '../../api/client';
+import { authService } from '../../api/authService';
 import { COLORS, SPACING } from '../../theme';
 
 const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const setAuth = useAuthStore(state => state.setAuth);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -26,12 +26,18 @@ const LoginScreen = ({ navigation }: any) => {
 
     setLoading(true);
     try {
-      const response = await client.post('/auth/login', { email, password });
-      const { user, token } = response.data;
-      setAuth(user, token);
+      const response = await authService.login({
+        email,
+        password,
+      });
+      const { user, accessToken } = response.data.data;
+      setAuth(user, accessToken);
     } catch (error: any) {
       console.error(error);
-      Alert.alert('Login Failed', error.response?.data?.message || 'Something went wrong');
+      Alert.alert(
+        'Login Failed',
+        error.response?.data?.message || 'Something went wrong',
+      );
     } finally {
       setLoading(false);
     }

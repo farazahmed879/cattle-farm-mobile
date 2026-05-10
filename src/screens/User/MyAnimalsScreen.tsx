@@ -10,8 +10,9 @@ import {
   Image,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import client from '../../api/client';
+import { paymentService } from '../../api/paymentService';
 import { COLORS, SPACING, SHADOW } from '../../theme';
+import { API_URL } from '@env';
 
 interface Purchase {
   id: string;
@@ -31,7 +32,7 @@ const MyAnimalsScreen = () => {
 
   const fetchPurchases = async () => {
     try {
-      const response = await client.get('/payment/my-purchases');
+      const response = await paymentService.getMyPurchases();
       setPurchases(response.data);
     } catch (error) {
       console.error('Failed to fetch purchases', error);
@@ -62,9 +63,7 @@ const MyAnimalsScreen = () => {
 
     try {
       setLoading(true);
-      await client.post(`/payment/${purchaseId}/upload-proof`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await paymentService.uploadProof(purchaseId, formData);
       Alert.alert('Success', 'Payment proof uploaded successfully!');
       fetchPurchases();
     } catch (error) {
@@ -77,7 +76,14 @@ const MyAnimalsScreen = () => {
 
   const renderItem = ({ item }: { item: Purchase }) => (
     <View style={styles.card}>
-      <Image source={{ uri: item.animal.imageUrl }} style={styles.animalImage} />
+      <Image 
+        source={{ 
+          uri: item.animal.imageUrl 
+            ? (item.animal.imageUrl.startsWith('http') ? item.animal.imageUrl : `${API_URL.replace('/api/', '')}${item.animal.imageUrl}`)
+            : 'https://via.placeholder.com/150' 
+        }} 
+        style={styles.animalImage} 
+      />
       <View style={styles.details}>
         <Text style={styles.name}>{item.animal.name}</Text>
         <Text style={styles.plan}>Plan: {item.plan}</Text>

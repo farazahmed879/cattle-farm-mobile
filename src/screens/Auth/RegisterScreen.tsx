@@ -9,7 +9,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import client from '../../api/client';
+import { authService } from '../../api/authService';
 import { COLORS, SPACING } from '../../theme';
 
 const RegisterScreen = ({ navigation }: any) => {
@@ -26,7 +26,7 @@ const RegisterScreen = ({ navigation }: any) => {
 
     setLoading(true);
     try {
-      await client.post('/auth/register', { name, email, password });
+      await authService.register({ name, email, password });
       Alert.alert('Success', 'Account created successfully! Please login.', [
         { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);

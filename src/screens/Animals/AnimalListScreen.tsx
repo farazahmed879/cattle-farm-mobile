@@ -9,8 +9,9 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
-import client from '../../api/client';
+import { animalService } from '../../api/animalService';
 import { COLORS, SPACING, SHADOW } from '../../theme';
+import { API_URL } from '@env';
 
 interface Animal {
   id: string;
@@ -30,8 +31,8 @@ const AnimalListScreen = ({ navigation }: any) => {
 
   const fetchAnimals = async () => {
     try {
-      const response = await client.get('/animal');
-      setAnimals(response.data);
+      const response = await animalService.getAll();
+      setAnimals(response.data.data);
     } catch (error) {
       console.error('Failed to fetch animals', error);
     } finally {
@@ -44,24 +45,32 @@ const AnimalListScreen = ({ navigation }: any) => {
   }, []);
 
   const filteredAnimals = animals.filter(
-    (a) =>
+    a =>
       a.name.toLowerCase().includes(search.toLowerCase()) ||
       a.type.toLowerCase().includes(search.toLowerCase()) ||
-      a.breed.toLowerCase().includes(search.toLowerCase())
+      a.breed.toLowerCase().includes(search.toLowerCase()),
   );
 
   const renderItem = ({ item }: { item: Animal }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => navigation.navigate('AnimalDetails', { animalId: item.id })}
+      onPress={() =>
+        navigation.navigate('AnimalDetails', { animalId: item.id })
+      }
     >
       <Image
-        source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }}
+        source={{ 
+          uri: item.imageUrl 
+            ? (item.imageUrl.startsWith('http') ? item.imageUrl : `${API_URL.replace('/api/', '')}${item.imageUrl}`)
+            : 'https://via.placeholder.com/150' 
+        }}
         style={styles.image}
       />
       <View style={styles.cardContent}>
         <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.breed}>{item.type} • {item.breed}</Text>
+        <Text style={styles.breed}>
+          {item.type} • {item.breed}
+        </Text>
         <Text style={styles.price}>${item.price.toLocaleString()}</Text>
       </View>
     </TouchableOpacity>
@@ -90,7 +99,7 @@ const AnimalListScreen = ({ navigation }: any) => {
       <FlatList
         data={filteredAnimals}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         numColumns={2}
         columnWrapperStyle={styles.row}

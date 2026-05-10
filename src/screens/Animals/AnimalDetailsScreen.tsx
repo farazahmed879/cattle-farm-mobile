@@ -8,8 +8,9 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import client from '../../api/client';
+import { animalService } from '../../api/animalService';
 import { COLORS, SPACING } from '../../theme';
+import { API_URL } from '@env';
 
 const AnimalDetailsScreen = ({ route, navigation }: any) => {
   const { animalId } = route.params;
@@ -19,8 +20,8 @@ const AnimalDetailsScreen = ({ route, navigation }: any) => {
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        const response = await client.get(`/animal/${animalId}`);
-        setAnimal(response.data);
+        const response = await animalService.getById(animalId);
+        setAnimal(response.data.data);
       } catch (error) {
         console.error('Failed to fetch details', error);
       } finally {
@@ -43,7 +44,11 @@ const AnimalDetailsScreen = ({ route, navigation }: any) => {
   return (
     <ScrollView style={styles.container}>
       <Image
-        source={{ uri: animal.imageUrl || 'https://via.placeholder.com/150' }}
+        source={{ 
+          uri: animal.imageUrl 
+            ? (animal.imageUrl.startsWith('http') ? animal.imageUrl : `${API_URL.replace('/api/', '')}${animal.imageUrl}`)
+            : 'https://via.placeholder.com/150' 
+        }}
         style={styles.image}
       />
       <View style={styles.content}>

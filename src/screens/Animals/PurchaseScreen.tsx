@@ -8,7 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import client from '../../api/client';
+import { animalService } from '../../api/animalService';
 import { COLORS, SPACING } from '../../theme';
 
 const PurchaseScreen = ({ route, navigation }: any) => {
@@ -19,7 +19,8 @@ const PurchaseScreen = ({ route, navigation }: any) => {
   const handlePurchase = async () => {
     setLoading(true);
     try {
-      await client.post(`/animal/${animalId}/purchase`, { plan: selectedPlan });
+      const installments = selectedPlan === 'FULL' ? 1 : selectedPlan === '3_MONTHS' ? 3 : 6;
+      await animalService.purchase(animalId, installments);
       Alert.alert('Success', 'Purchase initiated! Please upload payment proof.', [
         { text: 'OK', onPress: () => navigation.navigate('MyAnimals') },
       ]);
