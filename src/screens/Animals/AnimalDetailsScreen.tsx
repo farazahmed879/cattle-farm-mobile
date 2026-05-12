@@ -12,6 +12,8 @@ import { animalService } from '../../api/animalService';
 import { COLORS, SPACING } from '../../theme';
 import { API_URL } from '@env';
 
+const DEFAULT_AVATAR = require('../../assets/images/animal_avatar.png');
+
 const AnimalDetailsScreen = ({ route, navigation }: any) => {
   const { animalId } = route.params;
   const [animal, setAnimal] = useState<any>(null);
@@ -44,11 +46,10 @@ const AnimalDetailsScreen = ({ route, navigation }: any) => {
   return (
     <ScrollView style={styles.container}>
       <Image
-        source={{ 
-          uri: animal.imageUrl 
-            ? (animal.imageUrl.startsWith('http') ? animal.imageUrl : `${API_URL.replace('/api/', '')}${animal.imageUrl}`)
-            : 'https://via.placeholder.com/150' 
-        }}
+        source={animal.imageUrl
+          ? { uri: animal.imageUrl.startsWith('http') ? animal.imageUrl : `${API_URL.replace('/api/', '')}${animal.imageUrl}` }
+          : DEFAULT_AVATAR
+        }
         style={styles.image}
       />
       <View style={styles.content}>

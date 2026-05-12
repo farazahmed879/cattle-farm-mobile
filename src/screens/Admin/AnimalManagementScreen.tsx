@@ -11,12 +11,16 @@ import {
 import { animalService } from '../../api/animalService';
 import { COLORS, SPACING, SHADOW } from '../../theme';
 import { API_URL } from '@env';
+import ViewSwitcher from '../../components/common/ViewSwitcher';
+
+const DEFAULT_AVATAR = require('../../assets/images/animal_avatar.png');
 
 import { useFocusEffect } from '@react-navigation/native';
 
 const AnimalManagementScreen = ({ navigation }: any) => {
   const [animals, setAnimals] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   const fetchAnimals = async () => {
     try {
@@ -54,59 +58,94 @@ const AnimalManagementScreen = ({ navigation }: any) => {
     ]);
   };
 
-  const renderItem = ({ item }: any) => (
-    <View style={styles.item}>
-      <View style={styles.itemInfo}>
-        <Image 
-          source={{ 
-            uri: item.imageUrl 
-              ? (item.imageUrl.startsWith('http') ? item.imageUrl : `${API_URL.replace('/api/', '')}${item.imageUrl}`)
-              : 'https://via.placeholder.com/100' 
-          }} 
-          style={styles.thumbnail} 
-        />
-        <View style={styles.details}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemDetail}>{item.type} • {item.breed}</Text>
-          <Text style={styles.itemPrice}>${item.price}</Text>
+  const renderItem = ({ item }: any) => {
+    if (viewMode === 'grid') {
+      return (
+        <View style={styles.gridCard}>
+          <Image
+            source={item.imageUrl
+              ? { uri: item.imageUrl.startsWith('http') ? item.imageUrl : `${API_URL.replace('/api/', '')}${item.imageUrl}` }
+              : DEFAULT_AVATAR
+            }
+            style={styles.gridImage}
+          />
+          <View style={styles.gridContent}>
+            <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+            <Text style={styles.itemDetail} numberOfLines={1}>{item.type} • {item.breed}</Text>
+            <View style={styles.gridActions}>
+              <TouchableOpacity onPress={() => navigation.navigate('AddAnimal', { animal: item })}>
+                <Text style={styles.editAction}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDelete(item.id)}>
+                <Text style={styles.deleteAction}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.item}>
+        <View style={styles.itemInfo}>
+          <Image 
+            source={item.imageUrl
+              ? { uri: item.imageUrl.startsWith('http') ? item.imageUrl : `${API_URL.replace('/api/', '')}${item.imageUrl}` }
+              : DEFAULT_AVATAR
+            }
+            style={styles.thumbnail} 
+          />
+          <View style={styles.details}>
+            <Text style={styles.itemName}>{item.name}</Text>
+            <Text style={styles.itemDetail}>{item.type} • {item.breed}</Text>
+            <Text style={styles.itemPrice}>${item.price}</Text>
+          </View>
+        </View>
+        <View style={styles.actions}>
+          <TouchableOpacity 
+            style={styles.iconButton} 
+            onPress={() => navigation.navigate('AddAnimal', { animal: item })}
+          >
+            <Text style={styles.editAction}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.iconButton} 
+            onPress={() => handleDelete(item.id)}
+          >
+            <Text style={styles.deleteAction}>Delete</Text>
+          </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.actions}>
-        <TouchableOpacity 
-          style={styles.iconButton} 
-          onPress={() => navigation.navigate('AddAnimal', { animal: item })}
-        >
-          <Text style={styles.editAction}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.iconButton} 
-          onPress={() => handleDelete(item.id)}
-        >
-          <Text style={styles.deleteAction}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.countText}>{animals.length} Animals found</Text>
-        <TouchableOpacity 
-          style={styles.addButton} 
-          onPress={() => navigation.navigate('AddAnimal')}
-        >
-          <Text style={styles.addButtonText}>+ Add New</Text>
-        </TouchableOpacity>
+        <View style={styles.headerTop}>
+          <Text style={styles.countText}>{animals.length} Animals found</Text>
+          <TouchableOpacity 
+            style={styles.addButton} 
+            onPress={() => navigation.navigate('AddAnimal')}
+          >
+            <Text style={styles.addButtonText}>+ Add New</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.headerBottom}>
+          <ViewSwitcher currentMode={viewMode} onModeChange={setViewMode} />
+        </View>
       </View>
 
       <FlatList
+        key={viewMode}
         data={animals}
         keyExtractor={(item: any) => item.id}
         renderItem={renderItem}
         onRefresh={fetchAnimals}
         refreshing={refreshing}
         contentContainerStyle={styles.listContent}
+        numColumns={viewMode === 'grid' ? 2 : 1}
+        columnWrapperStyle={viewMode === 'grid' ? styles.row : null}
       />
     </View>
   );
@@ -118,12 +157,18 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background 
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: SPACING.md,
     backgroundColor: COLORS.surface,
     ...SHADOW,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  headerBottom: {
+    alignItems: 'flex-start',
   },
   countText: {
     fontSize: 16,
@@ -132,7 +177,7 @@ const styles = StyleSheet.create({
   },
   addButton: { 
     backgroundColor: COLORS.primary, 
-    paddingHorizontal: SPACING.lg, 
+    paddingHorizontal: SPACING.md, 
     paddingVertical: SPACING.sm, 
     borderRadius: 8, 
   },
@@ -143,6 +188,33 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: SPACING.md,
+  },
+  row: {
+    justifyContent: 'space-between',
+  },
+  gridCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    marginBottom: SPACING.md,
+    width: '48%',
+    ...SHADOW,
+  },
+  gridImage: {
+    width: '100%',
+    height: 120,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  gridContent: {
+    padding: SPACING.sm,
+  },
+  gridActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: SPACING.xs,
   },
   item: { 
     backgroundColor: COLORS.surface, 
@@ -167,19 +239,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   itemName: { 
-    fontSize: 18, 
+    fontSize: 16, 
     fontWeight: 'bold',
     color: COLORS.text,
   },
   itemDetail: { 
     color: COLORS.textSecondary,
-    fontSize: 14,
+    fontSize: 12,
     marginTop: 2,
   },
   itemPrice: {
     color: COLORS.primary,
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
     marginTop: 4,
   },
   actions: { 
@@ -193,10 +265,12 @@ const styles = StyleSheet.create({
   editAction: { 
     color: COLORS.primary, 
     fontWeight: '600',
+    fontSize: 12,
   },
   deleteAction: { 
     color: COLORS.error,
     fontWeight: '600',
+    fontSize: 12,
   },
 });
 

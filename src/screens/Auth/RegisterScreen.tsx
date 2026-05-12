@@ -17,6 +17,7 @@ const RegisterScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
@@ -25,14 +26,15 @@ const RegisterScreen = ({ navigation }: any) => {
     }
 
     setLoading(true);
+    setError(null);
     try {
       await authService.register({ name, email, password });
       Alert.alert('Success', 'Account created successfully! Please login.', [
         { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert('Registration Failed', error.response?.data?.message || 'Something went wrong');
+    } catch (err: any) {
+      console.error('Registration error:', err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Failed to create account');
     } finally {
       setLoading(false);
     }
@@ -45,26 +47,36 @@ const RegisterScreen = ({ navigation }: any) => {
 
       <View style={styles.inputContainer}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, error && styles.inputError]}
           placeholder="Full Name"
           value={name}
-          onChangeText={setName}
+          onChangeText={(text) => {
+            setName(text);
+            setError(null);
+          }}
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, error && styles.inputError]}
           placeholder="Email"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(text) => {
+            setEmail(text);
+            setError(null);
+          }}
           keyboardType="email-address"
           autoCapitalize="none"
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, error && styles.inputError]}
           placeholder="Password"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(text) => {
+            setPassword(text);
+            setError(null);
+          }}
           secureTextEntry
         />
+        {error && <Text style={styles.errorText}>{error}</Text>}
       </View>
 
       <TouchableOpacity
@@ -136,6 +148,16 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: COLORS.primary,
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: 14,
+    marginBottom: SPACING.md,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  inputError: {
+    borderColor: COLORS.error,
   },
 });
 

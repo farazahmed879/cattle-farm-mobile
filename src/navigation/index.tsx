@@ -22,57 +22,72 @@ import AnimalListScreen from '../screens/Animals/AnimalListScreen';
 import AnimalDetailsScreen from '../screens/Animals/AnimalDetailsScreen';
 import PurchaseScreen from '../screens/Animals/PurchaseScreen';
 import MyAnimalsScreen from '../screens/User/MyAnimalsScreen';
+import ProfileScreen from '../screens/Common/ProfileScreen';
 
 const Stack = createStackNavigator();
 
-const logoutOptions = (logout: () => void) => ({
+const commonHeaderOptions = (logout: () => void, navigation: any) => ({
   headerRight: () => (
-    <TouchableOpacity onPress={logout} style={{ marginRight: 15 }}>
-      <Text style={{ color: COLORS.error, fontWeight: 'bold' }}>Logout</Text>
-    </TouchableOpacity>
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <TouchableOpacity 
+        onPress={() => navigation.navigate('Profile')} 
+        style={{ marginRight: 15 }}
+      >
+        <Text style={{ color: COLORS.primary, fontWeight: 'bold' }}>Profile</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={logout} style={{ marginRight: 15 }}>
+        <Text style={{ color: COLORS.error, fontWeight: 'bold' }}>Logout</Text>
+      </TouchableOpacity>
+    </View>
   ),
 });
 
-const AdminStack = () => {
+import { View } from 'react-native';
+
+const AdminStack = ({ navigation }: any) => {
   const logout = useAuthStore(state => state.logout);
   return (
-    <Stack.Navigator screenOptions={logoutOptions(logout)}>
+    <Stack.Navigator screenOptions={commonHeaderOptions(logout, navigation)}>
       <Stack.Screen name="AdminHome" component={AdminDashboard} options={{ title: 'Admin Panel' }} />
       <Stack.Screen name="ManageAnimals" component={AnimalManagementScreen} options={{ title: 'Animals' }} />
       <Stack.Screen name="AddAnimal" component={AddAnimalScreen} options={{ title: 'Add/Edit Animal' }} />
       <Stack.Screen name="ManageUsers" component={UserManagementScreen} options={{ title: 'Users' }} />
+      <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'User Profile' }} />
     </Stack.Navigator>
   );
 };
 
-const FinanceStack = () => {
+const FinanceStack = ({ navigation }: any) => {
   const logout = useAuthStore(state => state.logout);
   return (
-    <Stack.Navigator screenOptions={logoutOptions(logout)}>
+    <Stack.Navigator screenOptions={commonHeaderOptions(logout, navigation)}>
       <Stack.Screen name="FinanceHome" component={FinanceDashboard} options={{ title: 'Finance Panel' }} />
       <Stack.Screen name="VerifyPayments" component={PaymentVerificationScreen} options={{ title: 'Verify Payments' }} />
+      <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Stack.Navigator>
   );
 };
 
-const WorkerStack = () => {
+const WorkerStack = ({ navigation }: any) => {
   const logout = useAuthStore(state => state.logout);
   return (
-    <Stack.Navigator screenOptions={logoutOptions(logout)}>
+    <Stack.Navigator screenOptions={commonHeaderOptions(logout, navigation)}>
       <Stack.Screen name="WorkerHome" component={WorkerDashboard} options={{ title: 'Worker Panel' }} />
       <Stack.Screen name="AssignedAnimals" component={AssignedAnimalsScreen} options={{ title: 'My Tasks' }} />
+      <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Stack.Navigator>
   );
 };
 
-const AnimalStack = () => {
+const AnimalStack = ({ navigation }: any) => {
   const logout = useAuthStore(state => state.logout);
   return (
-    <Stack.Navigator screenOptions={logoutOptions(logout)}>
+    <Stack.Navigator screenOptions={commonHeaderOptions(logout, navigation)}>
       <Stack.Screen name="AnimalList" component={AnimalListScreen} options={{ title: 'Animals' }} />
       <Stack.Screen name="AnimalDetails" component={AnimalDetailsScreen} options={{ title: 'Details' }} />
       <Stack.Screen name="Purchase" component={PurchaseScreen} options={{ title: 'Purchase' }} />
       <Stack.Screen name="MyAnimals" component={MyAnimalsScreen} options={{ title: 'My Purchases' }} />
+      <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
     </Stack.Navigator>
   );
 };

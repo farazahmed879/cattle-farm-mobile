@@ -16,6 +16,7 @@ const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const setAuth = useAuthStore(state => state.setAuth);
 
   const handleLogin = async () => {
@@ -25,6 +26,7 @@ const LoginScreen = ({ navigation }: any) => {
     }
 
     setLoading(true);
+    setError(null);
     try {
       const response = await authService.login({
         email,
@@ -32,12 +34,10 @@ const LoginScreen = ({ navigation }: any) => {
       });
       const { user, accessToken } = response.data.data;
       setAuth(user, accessToken);
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert(
-        'Login Failed',
-        error.response?.data?.message || 'Something went wrong',
-      );
+    } catch (err: any) {
+      console.error('Login error:', err.response?.data || err.message);
+      const message = err.response?.data?.message || 'Invalid email or password';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -50,20 +50,27 @@ const LoginScreen = ({ navigation }: any) => {
 
       <View style={styles.inputContainer}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, error && styles.inputError]}
           placeholder="Email"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(text) => {
+            setEmail(text);
+            setError(null);
+          }}
           keyboardType="email-address"
           autoCapitalize="none"
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, error && styles.inputError]}
           placeholder="Password"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(text) => {
+            setPassword(text);
+            setError(null);
+          }}
           secureTextEntry
         />
+        {error && <Text style={styles.errorText}>{error}</Text>}
       </View>
 
       <TouchableOpacity
@@ -135,6 +142,16 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: COLORS.primary,
+  },
+  errorText: {
+    color: COLORS.error || '#ff4444',
+    fontSize: 14,
+    marginBottom: SPACING.md,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  inputError: {
+    borderColor: COLORS.error || '#ff4444',
   },
 });
 

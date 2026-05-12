@@ -13,19 +13,39 @@ import {
   Platform,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { Formik } from 'formik';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import * as Yup from 'yup';
 import { animalService } from '../../api/animalService';
+import Input from '../../components/forms/Input';
+import TextArea from '../../components/forms/TextArea';
+import Select from '../../components/forms/Select';
 import { COLORS, SPACING, SHADOW } from '../../theme';
 import { API_URL } from '@env';
 
+const DEFAULT_AVATAR = require('../../assets/images/animal_avatar.png');
+
 const AnimalSchema = Yup.object().shape({
-  name: Yup.string().required('Name is required'),
-  breed: Yup.string().required('Breed is required'),
-  price: Yup.number().positive('Price must be positive').required('Price is required'),
-  age: Yup.number().integer().positive('Age must be a positive integer').required('Age is required'),
-  weight: Yup.number().positive('Weight must be positive').required('Weight is required'),
-  description: Yup.string(),
+  name: Yup.string().trim().required('Name is required'),
+  type: Yup.string().trim().required('Type is required'),
+  breed: Yup.string().trim().required('Breed is required'),
+  price: Yup.number()
+    .transform((value, originalValue) => (String(originalValue).trim() === '' ? undefined : value))
+    .typeError('Price must be a valid number')
+    .positive('Price must be positive')
+    .required('Price is required'),
+  age: Yup.number()
+    .transform((value, originalValue) => (String(originalValue).trim() === '' ? undefined : value))
+    .typeError('Age must be a valid number')
+    .integer('Age must be an integer')
+    .positive('Age must be a positive integer')
+    .required('Age is required'),
+  weight: Yup.number()
+    .transform((value, originalValue) => (String(originalValue).trim() === '' ? undefined : value))
+    .typeError('Weight must be a valid number')
+    .positive('Weight must be positive')
+    .required('Weight is required'),
+  description: Yup.string().trim(),
 });
 
 const AddAnimalScreen = ({ navigation, route }: any) => {
@@ -36,6 +56,19 @@ const AddAnimalScreen = ({ navigation, route }: any) => {
       ? { uri: editingAnimal.imageUrl.startsWith('http') ? editingAnimal.imageUrl : `${API_URL.replace('/api/', '')}${editingAnimal.imageUrl}` } 
       : null
   );
+
+  const { control, handleSubmit } = useForm({
+    resolver: yupResolver(AnimalSchema),
+    defaultValues: {
+      name: editingAnimal?.name || '',
+      type: editingAnimal?.type || 'COW',
+      breed: editingAnimal?.breed || '',
+      price: editingAnimal?.price?.toString() || '',
+      age: editingAnimal?.age?.toString() || '',
+      weight: editingAnimal?.weight?.toString() || '',
+      description: editingAnimal?.description || '',
+    },
+  });
 
   const selectImage = () => {
     launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, (response) => {
@@ -50,7 +83,7 @@ const AddAnimalScreen = ({ navigation, route }: any) => {
     try {
       const formData = new FormData();
       formData.append('name', values.name);
-      formData.append('type', 'COW'); // Default for now
+      formData.append('type', values.type);
       formData.append('breed', values.breed);
       formData.append('price', values.price.toString());
       formData.append('age', values.age.toString());
@@ -93,107 +126,82 @@ const AddAnimalScreen = ({ navigation, route }: any) => {
           {image ? (
             <Image source={{ uri: image.uri }} style={styles.image} />
           ) : (
-            <View style={styles.imagePlaceholder}>
-              <Text style={styles.placeholderText}>📷 Select Animal Photo</Text>
-            </View>
+            <Image source={DEFAULT_AVATAR} style={styles.image} />
           )}
         </TouchableOpacity>
 
-        <Formik
-          initialValues={{
-            name: editingAnimal?.name || '',
-            breed: editingAnimal?.breed || '',
-            price: editingAnimal?.price?.toString() || '',
-            age: editingAnimal?.age?.toString() || '',
-            weight: editingAnimal?.weight?.toString() || '',
-            description: editingAnimal?.description || '',
-          }}
-          validationSchema={AnimalSchema}
-          onSubmit={handleSave}
-        >
-          {({ handleChange, handleBlur, handleSubmit, values, errors, touched }) => (
             <View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Name</Text>
-                <TextInput
-                  style={[styles.input, touched.name && errors.name && styles.inputError]}
-                  placeholder="e.g. Daisy"
-                  onChangeText={handleChange('name')}
-                  onBlur={handleBlur('name')}
-                  value={values.name}
-                />
-                {touched.name && errors.name && <Text style={styles.errorText}>{errors.name as string}</Text>}
-              </View>
+              <Input
+                control={control}
+                name="name"
+                label="Name"
+                placeholder="e.g. Daisy"
+                required
+              />
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Breed</Text>
-                <TextInput
-                  style={[styles.input, touched.breed && errors.breed && styles.inputError]}
-                  placeholder="e.g. Holstein"
-                  onChangeText={handleChange('breed')}
-                  onBlur={handleBlur('breed')}
-                  value={values.breed}
-                />
-                {touched.breed && errors.breed && <Text style={styles.errorText}>{errors.breed as string}</Text>}
-              </View>
+              <Select
+                control={control}
+                name="type"
+                label="Type"
+                required
+                options={[
+                  { label: 'Cow', value: 'COW' },
+                  { label: 'Bull', value: 'BULL' },
+                  { label: 'Calf', value: 'CALF' },
+                ]}
+              />
+
+              <Input
+                control={control}
+                name="breed"
+                label="Breed"
+                placeholder="e.g. Holstein"
+                required
+              />
 
               <View style={styles.row}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: SPACING.sm }]}>
-                  <Text style={styles.label}>Price ($)</Text>
-                  <TextInput
-                    style={[styles.input, touched.price && errors.price && styles.inputError]}
+                <View style={{ flex: 1, marginRight: SPACING.sm }}>
+                  <Input
+                    control={control}
+                    name="price"
+                    label="Price ($)"
                     placeholder="0.00"
                     keyboardType="numeric"
-                    onChangeText={handleChange('price')}
-                    onBlur={handleBlur('price')}
-                    value={values.price}
+                    required
                   />
-                  {touched.price && errors.price && <Text style={styles.errorText}>{errors.price as string}</Text>}
                 </View>
 
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.label}>Age (Months)</Text>
-                  <TextInput
-                    style={[styles.input, touched.age && errors.age && styles.inputError]}
+                <View style={{ flex: 1 }}>
+                  <Input
+                    control={control}
+                    name="age"
+                    label="Age (Months)"
                     placeholder="0"
                     keyboardType="numeric"
-                    onChangeText={handleChange('age')}
-                    onBlur={handleBlur('age')}
-                    value={values.age}
+                    required
                   />
-                  {touched.age && errors.age && <Text style={styles.errorText}>{errors.age as string}</Text>}
                 </View>
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Weight (KG)</Text>
-                <TextInput
-                  style={[styles.input, touched.weight && errors.weight && styles.inputError]}
-                  placeholder="0.00"
-                  keyboardType="numeric"
-                  onChangeText={handleChange('weight')}
-                  onBlur={handleBlur('weight')}
-                  value={values.weight}
-                />
-                {touched.weight && errors.weight && <Text style={styles.errorText}>{errors.weight as string}</Text>}
-              </View>
+              <Input
+                control={control}
+                name="weight"
+                label="Weight (KG)"
+                placeholder="0.00"
+                keyboardType="numeric"
+                required
+              />
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Description</Text>
-                <TextInput
-                  style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
-                  placeholder="Tell us more about this animal..."
-                  multiline
-                  numberOfLines={4}
-                  onChangeText={handleChange('description')}
-                  onBlur={handleBlur('description')}
-                  value={values.description}
-                />
-              </View>
+              <TextArea
+                control={control}
+                name="description"
+                label="Description"
+                placeholder="Tell us more about this animal..."
+              />
 
               <TouchableOpacity
                 style={[styles.submitButton, loading && styles.disabledButton]}
-                onPress={() => handleSubmit()}
+                onPress={handleSubmit(handleSave)}
                 disabled={loading}
               >
                 {loading ? (
@@ -205,8 +213,6 @@ const AddAnimalScreen = ({ navigation, route }: any) => {
                 )}
               </TouchableOpacity>
             </View>
-          )}
-        </Formik>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -251,32 +257,6 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: COLORS.textSecondary,
     fontSize: 16,
-  },
-  inputGroup: {
-    marginBottom: SPACING.md,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-  },
-  input: {
-    backgroundColor: COLORS.surface,
-    padding: SPACING.md,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  inputError: {
-    borderColor: COLORS.error,
-  },
-  errorText: {
-    color: COLORS.error,
-    fontSize: 12,
-    marginTop: SPACING.xs,
   },
   row: {
     flexDirection: 'row',
